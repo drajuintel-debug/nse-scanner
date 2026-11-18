@@ -1,0 +1,29 @@
+name: FNO Scanner
+
+on:
+  schedule:
+    # every 15 min, 08:30-16:15 IST (03:00-10:45 UTC), Mon-Fri
+    - cron: "*/15 3-10 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "scan, test (market snapshot now) or backtest"
+        default: "test"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install yfinance pandas numpy requests
+      - name: Run
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MODE: ${{ github.event.inputs.mode }}
+          # set to "1" to skip signals in sideways/choppy markets
+          REQUIRE_TREND: "0"
+        run: | if [ "$MODE" = "backtest" ]; then SEND=1 python backtest.py elif [ "$MODE" = "test" ]; then TEST=1 python fno_scanner.py else python fno_scanner.py fi
